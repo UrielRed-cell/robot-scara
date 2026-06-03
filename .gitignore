@@ -1,0 +1,7 @@
+*.FCStd1
+*.bak
+*.autosave
+**pycache**/
+*.pyc
+.DS_Store
+Thumbs.db
