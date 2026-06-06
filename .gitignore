@@ -1,6 +1,8 @@
 *.FCStd1
+*.FCBak
 *.bak
 *.autosave
+**extras**/
 **pycache**/
 *.pyc
 .DS_Store
