@@ -26,3 +26,8 @@ Este proyecto se distribuye bajo la licencia MIT.
 ## Autor
 
 Uriel
+
+## LICENSE
+The MIT License applies to all files in this repository,
+including source code, PCB designs, CAD models and documentation,
+unless otherwise specified.
