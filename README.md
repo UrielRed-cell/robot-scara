@@ -20,30 +20,17 @@ El objetivo principal es servir como plataforma de aprendizaje para diseño mec�
 
 ## Programa 
 El control del robot se dividira en dos partes
-* Control de **bajo** nivel
-* Control de **alto** nivel
-En el caso de alto nivel se cuenta con la carpeta control en la cual se encuentran:
-_image-parser_ y _main_
-la forma de uso de _image-parser_ es:
-```
-BASE = Path(__file__).resolve().parent.parent
+Modo:
+( ) Rutina
+( ) Tiempo Real
 
-imagen = BASE / "furrul_prueba.png"
-print(BASE)
-print(imagen)
-print(imagen.exists())
-rbs=ImgMeca(200,200)
+Velocidad:
+[ Tiempo: 100ms ]
 
-rbs.carga_img(imagen)
-rbs.normaliza()
-rbs.blanco_negro()
-rbs.bordes()
-rbs.vectoriza()
-#print(rbs.vector)
-print(len(rbs.vector))
-```
-Estos trazos seran enviados a _com-serial_ para finalmente llegar al mcu
+        Canvas
 
+[Reinicio] [Reposo]
+[LABEL:POS]
 ***EMBEBIDO*** 
 Para la comunicación se usara la plataforma laso que permitira una comunicación efectiva entre un mcu y una computadora
 
