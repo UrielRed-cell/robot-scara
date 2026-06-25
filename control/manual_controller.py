@@ -3,11 +3,14 @@ from textual.widgets import Footer,Header
 from textual.containers import HorizontalGroup,VerticalGroup
 from textual_canvas import Canvas,CanvasError
 from textual.color import Color
-from textual.widgets import Button,Label,Digits,RadioButton,RadioSet
+from textual.widgets import Button,Label,Digits,RadioButton,RadioSet,Footer,Static
 from datetime import datetime,timedelta
 from textual.reactive import reactive
+from textual.binding import Binding
+from textual.screen import Screen
 
 class VerticalMenu(HorizontalGroup):
+    
     def on_mount(self)->None:
         #self.query_one(RadioSet).focus()
         self.query_one("#rutina").focus()
@@ -16,13 +19,13 @@ class VerticalMenu(HorizontalGroup):
         self.query_one("#parar").disabled = True
 
     def compose(self):
-        with RadioSet(id="focus_me"):
+        with RadioSet():
             yield RadioButton("Rutina",id="rutina")
             yield RadioButton("Tiempo Real",id="t_real")
         yield Button("Iniciar",id="iniciar")
         #TODO Agregar un radiobutton flotante que sea un menu
         #Eliges si exportas o no.
-        yield Button("Parar",id="parar")
+        yield Button("Fin",id="parar")
         yield Label("Tiempo de ejecución",id="tiempo") 
         yield TimeDisplay()
 
@@ -45,6 +48,14 @@ class VerticalMenu(HorizontalGroup):
         elif button_id=="parar":
             if event.button.id=="parar":
                 self.query_one(TimeDisplay).stop()
+
+    def action_next_widget(self):
+        self.screen.focus_next()
+
+    def action_previous_widget(self):
+        self.screen.focus_previous()
+
+
 
 class TimeDisplay(Digits):
     time=reactive(0)
@@ -74,6 +85,7 @@ class HorizontalCanvas(HorizontalGroup):
     def on_mount(self):
         self.query_one(Canvas).clear()
         self.query_one(Canvas).draw_rectangle(2,2,26,26)
+        self.query_one(Canvas).can_focus=False
 
     def compose(self):
         yield Button("Reiniciar",id="reiniciar",variant="error")
@@ -106,23 +118,34 @@ class FooterMenu(HorizontalGroup):
     def compose(self):
         yield Label(f"Posición: ({self.x},{self.y})",id="position")
 
+class Popup(Screen):
+
+    def __init__(self, message: str):
+        super().__init__()
+        self.message = message
+
+    def compose(self):
+        yield Static(self.message,id="msg")
+        yield Button("OK", id="ok")
+
+    def on_button_pressed(self, event):
+        self.app.pop_screen()
+
 class ManualController(App):
     x,y=0,0
     #TODO Checar bidings
     #clave,accion,descripcion
-    BINDINGS=[
-            ("w","move_up","arriba"),
-            ("a","move_left","izquierda"),
-            ("s","move_down","abajo"),
-            ("d","move_right","derecha")
+    BINDINGS:list[Binding]=[
+        Binding("p" ,"dibujar","dibujar",show=True),
+        Binding("tab","cambia","cambia",show=True),
+        Binding("enter", "activar", "activar",show=True),
+        Binding("w","move_up","arriba",show=True),
+        Binding("a","move_left","izquierda",show=True),
+        Binding("s","move_down","abajo",show=True),
+        Binding("d","move_right","derecha",show=True)
               ]
-    CSS="""FooterMenu {
-    height: 3;
-}
-
-HorizontalCanvas {
-    height: 35;
-}"""
+    CSS_PATH = "styles.tcss"
+    
     def paint_pos(self):
         try:
             self.query_one("#canva").set_pixel(self.x,self.y,color=Color.parse("white"))
@@ -132,6 +155,7 @@ HorizontalCanvas {
         except CanvasError:
             #TODO Agregar alerta
             pass
+
     def action_move_up(self):
         self.y-=1
         self.paint_pos()
@@ -147,11 +171,61 @@ HorizontalCanvas {
     def action_move_right(self):
         self.x+=1
         self.paint_pos()
+   
+#    def action_next_widget(self):
+#        self.focus_index += 1
+
+#        if self.focus_index >= len(self.menu_widgets):
+#            self.focus_index = 0
+
+#        self.menu_widgets[self.focus_index].focus()
+
+
+#    def action_previous_widget(self):
+#        self.focus_index -= 1
+
+#       if self.focus_index < 0:
+#            self.focus_index = len(self.menu_widgets)-1
+
+#       self.menu_widgets[self.focus_index].focus()
+
+    def action_activate(self):
+        if self.focused:
+            self.focused.press()
 
     def compose(self):
         yield VerticalGroup(VerticalMenu(),HorizontalCanvas(),FooterMenu(0,0))
+        yield Footer()
 
-    def on_mount(self):
-        print(self.query_one("#position"))
+    def on_mount(self):    
+        #TODO BORRAR 
+        self.focus_index = 0
 
+        self.menu_widgets=[
+                self.query_one("#rutina"),
+                self.query_one("#t_real"),
+                self.query_one("#iniciar"),
+                self.query_one("#parar"),
+                self.query_one("#reposo"),
+                ]
+        #print(self.query_one("#position"))
 
+    def show_popup(self, text: str):
+        self.push_screen(Popup(text))
+
+    def on_button_pressed(self, event):
+        if event.button.id == "parar":
+            self.show_popup("Exportado con éxito ✅")
+    
+        if event.button.id == "iniciar":
+            self.show_popup("Conexión en vivo 🔴")
+
+#    def on_key(self, event):
+#        if isinstance(self.focused, RadioSet):
+#            if event.key in ("left", "right"):
+#                event.stop()
+#                self.action_next_widget()
+
+            #elif event.key in ("up", "left"):
+                #event.stop()
+                #self.action_previous_widget()
