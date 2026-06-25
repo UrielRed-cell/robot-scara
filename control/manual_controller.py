@@ -114,9 +114,11 @@ class FooterMenu(HorizontalGroup):
         super().__init__()
         self.x=x
         self.y=y
+        #self.hrr=hrr
 
     def compose(self):
         yield Label(f"Posición: ({self.x},{self.y})",id="position",classes="box")
+        #yield Label(f"Estado de herramienta{self.hrr}",id="herramienta",classe="box")
 
 class Popup(Screen):
 
@@ -133,10 +135,11 @@ class Popup(Screen):
 
 class ManualController(App):
     x,y=0,0
+    tool=False
     #TODO Checar bidings
     #clave,accion,descripcion
     BINDINGS:list[Binding]=[
-        Binding("p" ,"dibujar","dibujar",show=True),
+        Binding("p" ,"tool","dibujar",show=True),
         Binding("tab","cambia","cambia",show=True),
         Binding("enter", "activar", "activar",show=True),
         Binding("w","move_up","arriba",show=True),
@@ -155,6 +158,10 @@ class ManualController(App):
         except CanvasError:
             #TODO Agregar alerta
             pass
+    
+    def update_tool(self):
+        pass
+        #self.query_one("#herramienta").update(f"Herramienta: {self.tool}")
 
     def action_move_up(self):
         self.y-=1
@@ -171,7 +178,10 @@ class ManualController(App):
     def action_move_right(self):
         self.x+=1
         self.paint_pos()
-   
+
+    #def action_tool(self):
+    #    self.tool=!self.tool
+    #   self.update_tool()
 #    def action_next_widget(self):
 #        self.focus_index += 1
 
