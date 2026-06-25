@@ -19,14 +19,14 @@ class VerticalMenu(HorizontalGroup):
         self.query_one("#parar").disabled = True
 
     def compose(self):
-        with RadioSet():
+        with RadioSet(id="radio_set"):
             yield RadioButton("Rutina",id="rutina")
             yield RadioButton("Tiempo Real",id="t_real")
         yield Button("Iniciar",id="iniciar")
         #TODO Agregar un radiobutton flotante que sea un menu
         #Eliges si exportas o no.
         yield Button("Fin",id="parar")
-        yield Label("Tiempo de ejecución",id="tiempo") 
+        yield Label("Tiempo de ejecución",id="tiempo",classes="box") 
         yield TimeDisplay()
 
     
@@ -89,7 +89,7 @@ class HorizontalCanvas(HorizontalGroup):
 
     def compose(self):
         yield Button("Reiniciar",id="reiniciar",variant="error")
-        yield Canvas(30,30,Color(128,0,128),id="canva",pen_color=Color.parse("red"))
+        yield Canvas(width=50,height=50,canvas_color=Color(0,120,255),id="canva",pen_color=Color.parse("red"))
         yield Button("Reposo",id="reposo",variant="error")
     
     def reset(self):
@@ -116,7 +116,7 @@ class FooterMenu(HorizontalGroup):
         self.y=y
 
     def compose(self):
-        yield Label(f"Posición: ({self.x},{self.y})",id="position")
+        yield Label(f"Posición: ({self.x},{self.y})",id="position",classes="box")
 
 class Popup(Screen):
 

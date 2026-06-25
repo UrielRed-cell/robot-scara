@@ -1,0 +1,88 @@
+Screen {
+    background: #000000;
+    color: #cfe8ff;
+}
+
+/* Labels normales */
+Label {
+    color: #b9d7ff;
+    padding: 0 1;
+}
+
+Label.box {
+    border: round #1f6fff;
+    background: #05070f;
+    margin: 1 0;
+}
+/* Título / estado */
+#tiempo {
+    color: #4ea1ff;
+    text-style: bold;
+}
+
+/* BOTONES AZULES */
+Button {
+    background: #0b2a55;
+    color: #cfe8ff;
+    border: round #1f6fff;
+    padding: 0 2;
+}
+
+/* hover (ligero brillo azul) */
+Button:hover {
+    background: #123f7a;
+}
+
+/* RadioButtons compactos */
+RadioButton {
+    color: #cfe8ff;
+}
+
+/* RadioSet sin inflar espacio */
+RadioSet {
+    height: auto;
+    padding: 0;
+    width: 60;
+}
+
+#radio_set{
+    height: auto;
+    width: 40;
+}
+
+/* CANVAS negro con borde azul */
+Canvas {
+    background: #000000;
+    border: round #1f6fff;
+    padding: 0;
+}
+
+/* TimeDisplay */
+TimeDisplay {
+    color: #4ea1ff;
+    text-style: bold;
+}
+
+#canva {
+    width: 50;
+    height: 50;
+}
+
+Widget {
+    padding: 0 0;
+    margin: 0 0;
+}
+
+VerticalMenu {
+    margin: 1 0;
+}
+
+HorizontalCanvas {
+    height: 25;
+    width: 85;
+    margin: 1 0;
+    overflow: hidden;
+    align: center middle;
+    padding: 0;
+    /*height: 100%;*/
+}
