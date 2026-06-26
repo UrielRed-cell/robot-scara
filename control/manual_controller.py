@@ -8,6 +8,7 @@ from datetime import datetime,timedelta
 from textual.reactive import reactive
 from textual.binding import Binding
 from textual.screen import Screen
+from robot import SCARARobot
 
 class VerticalMenu(HorizontalGroup):
     
@@ -35,9 +36,9 @@ class VerticalMenu(HorizontalGroup):
         self.query_one("#parar").disabled=False
         
         if event.pressed.id=="rutina":
-            pass
+            self.app.mode="rutina"
         elif event.pressed.id=="t_real":
-            pass
+            self.app.mode="t_real"
 
     def on_button_pressed(self,event):
         button_id=event.button.id
@@ -45,9 +46,11 @@ class VerticalMenu(HorizontalGroup):
         if button_id=="iniciar":
             if event.button.id=="iniciar":
                 self.query_one(TimeDisplay).start()
+                self.app.begin=True
         elif button_id=="parar":
             if event.button.id=="parar":
                 self.query_one(TimeDisplay).stop()
+                self.app.send_path()
 
     def action_next_widget(self):
         self.screen.focus_next()
@@ -84,9 +87,10 @@ class TimeDisplay(Digits):
 class HorizontalCanvas(HorizontalGroup):
     def on_mount(self):
         self.query_one(Canvas).clear()
-        self.query_one(Canvas).draw_rectangle(2,2,26,26)
+        #self.query_one(Canvas).draw_rectangle(2,2,26,26)
         self.query_one(Canvas).can_focus=False
-
+        self.query_one(Canvas).set_pixel(23,23,color=Color.parse("red"))
+        
     def compose(self):
         yield Button("Reiniciar",id="reiniciar",variant="error")
         yield Canvas(width=50,height=50,canvas_color=Color(0,120,255),id="canva",pen_color=Color.parse("red"))
@@ -94,20 +98,24 @@ class HorizontalCanvas(HorizontalGroup):
     
     def reset(self):
         self.query_one(Canvas).clear()
-        self.query_one(Canvas).draw_rectangle(2,2,26,26)
-        self.query_one(Canvas).set_pixel(0,0)
+        #self.query_one(Canvas).draw_rectangle(2,2,26,26)
+        self.query_one(Canvas).set_pixel(23,23)
 
     def on_button_pressed(self,event):
         button_id=event.button.id
         if button_id=="reiniciar":
-            self.reset()
-            self.app.x=0
-            self.app.y=0
+            #self.app.x=23
+            #self.app.y=23
             #OJO esto es un paso por referencia
+            self.query_one(Canvas).clear()
+            self.app.path=set()
+            self.app.redraw_canvas()
             timer = self.app.query_one(TimeDisplay)
             timer.reset()
         elif button_id=="reposo":
-            pass
+            self.app.x=23
+            self.app.y=23
+            self.reset()
 
 class FooterMenu(HorizontalGroup):
     def __init__(self,x,y):
@@ -117,7 +125,7 @@ class FooterMenu(HorizontalGroup):
         #self.hrr=hrr
 
     def compose(self):
-        yield Label(f"Posición: ({self.x},{self.y})",id="position",classes="box")
+        yield Label(f"Posición: ({self.x},{self.y}) Herramienta: FUERA",id="position",classes="box")
         #yield Label(f"Estado de herramienta{self.hrr}",id="herramienta",classe="box")
 
 class Popup(Screen):
@@ -134,8 +142,15 @@ class Popup(Screen):
         self.app.pop_screen()
 
 class ManualController(App):
-    x,y=0,0
+    rb=None
+    x,y=23,23
     tool=False
+    path=set()
+    mode=None
+    begin=False
+    scara_x_range=10
+    scara_y_range=10
+    last_sent=None
     #TODO Checar bidings
     #clave,accion,descripcion
     BINDINGS:list[Binding]=[
@@ -150,35 +165,79 @@ class ManualController(App):
     CSS_PATH = "styles.tcss"
     
     def paint_pos(self):
+        if not self.begin:
+            return
         try:
-            self.query_one("#canva").set_pixel(self.x,self.y,color=Color.parse("white"))
-            self.query_one("#position").update(f"Posición: ({self.x},{self.y})")
+            if self.tool:
+                #self.query_one("#canva").set_pixel(self.x,self.y,color=Color.parse("white"))
+                self.path.add((self.x,self.y))
+                if self.mode=="t_real":
+                    self.send_pos()
+            self.redraw_canvas()
+            self.query_one("#position").update(f"Posición: ({self.x},{self.y}) Herramienta: {'LISTA' if self.tool else 'FUERA'}")
             #TODO Arreglar
-            self.query_one("#canva").set_pen(Color.parse("red"))
+            #self.query_one("#canva").set_pen(Color.parse("red"))
         except CanvasError:
             #TODO Agregar alerta
             pass
+
+    def redraw_canvas(self):
+        canvas = self.query_one("#canva")
+
+        canvas.clear()
+
+        # Dibujar todos los trazos guardados
+        for x, y in self.path:
+            canvas.set_pixel(x,y,color=Color.parse("white"))
+
+        # Dibujar cursor actual
+        canvas.set_pixel(self.x,self.y,color=Color.parse("red"))
+#No se ocupa
+    def move_cursor(self, dx, dy):
+        # borrar cursor viejo
+        self.canvas.set_pixel(self.x,self.y,color=self.background_color)
+
+        self.x += dx
+        self.y += dy
+
+        # dejar trazo si está activo
+        if self.drawing:
+            self.canvas.set_pixel(self.x,self.y,color=Color.parse("white"))
+
+        # dibujar cursor
+        self.canvas.set_pixel(self.x,self.y,color=Color.parse("red"))
     
     def update_tool(self):
         pass
         #self.query_one("#herramienta").update(f"Herramienta: {self.tool}")
 
     def action_move_up(self):
-        self.y-=1
+        if not self.begin:
+            return
+        self.y = max(0, self.y-1)
         self.paint_pos()
     
     def action_move_down(self):
-        self.y+=1
+        if not self.begin:
+            return
+        self.y = min(49, self.y+1)
         self.paint_pos()
 
     def action_move_left(self):
-        self.x-=1
+        if not self.begin:
+            return
+        self.x = max(0, self.x-1)
         self.paint_pos()
     
     def action_move_right(self):
-        self.x+=1
+        if not self.begin:
+            return
+        self.x = min(46, self.x+1)
         self.paint_pos()
 
+    def action_tool(self):
+        self.tool=not self.tool
+        self.paint_pos()
     #def action_tool(self):
     #    self.tool=!self.tool
     #   self.update_tool()
@@ -204,7 +263,7 @@ class ManualController(App):
             self.focused.press()
 
     def compose(self):
-        yield VerticalGroup(VerticalMenu(),HorizontalCanvas(),FooterMenu(0,0))
+        yield VerticalGroup(VerticalMenu(),HorizontalCanvas(),FooterMenu(23,23))
         yield Footer()
 
     def on_mount(self):    
@@ -219,6 +278,7 @@ class ManualController(App):
                 self.query_one("#reposo"),
                 ]
         #print(self.query_one("#position"))
+        #rb=SCARARobot()
 
     def show_popup(self, text: str):
         self.push_screen(Popup(text))
@@ -228,8 +288,11 @@ class ManualController(App):
             self.show_popup("Exportado con éxito ✅")
     
         if event.button.id == "iniciar":
-            self.show_popup("Conexión en vivo 🔴")
-
+            try:
+                rb=SCARARobot()
+                self.show_popup("Conexión en vivo 🔴")
+            except e:
+                self.show_popup("Error en conexión 🔴")
 #    def on_key(self, event):
 #        if isinstance(self.focused, RadioSet):
 #            if event.key in ("left", "right"):
@@ -239,3 +302,28 @@ class ManualController(App):
             #elif event.key in ("up", "left"):
                 #event.stop()
                 #self.action_previous_widget()
+    def canvas_to_scara(self, x, y):
+        xmin, xmax = self.scara_x_range
+        ymin, ymax = self.scara_y_range
+
+        xs = (x / 46) * (xmax - xmin) + xmin
+        ys = (y / 49) * (ymax - ymin) + ymin
+
+        return xs, ys
+    
+    def send_pos(self):
+        xs,ys=self.canva_to_scara(self.x,self.y)
+        if self.last_sent!=(xs,ys):
+            self.rb.send_position(xs,ys)
+            self.last_sent=(xs,ys)
+
+            pass
+            
+        #con=rb.conection()
+
+
+    
+    def send_path(self):
+        for x,y in self.path:
+            xs,ys=self.canvas_to_scara(x,y)
+            self.robot.send_position(xs,ys)

@@ -64,8 +64,8 @@ TimeDisplay {
 }
 
 #canva {
-    width: 50;
-    height: 50;
+    width: 49;
+    height: 52;
 }
 
 Widget {
@@ -78,8 +78,8 @@ VerticalMenu {
 }
 
 HorizontalCanvas {
-    height: 25;
-    width: 85;
+    height: 26;
+    width: 95;
     margin: 1 0;
     overflow: hidden;
     align: center middle;
