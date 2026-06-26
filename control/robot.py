@@ -1,4 +1,5 @@
 import serial
+import math
 
 class SCARARobot:
     def __init__(self, port="/dev/ttyUSB0", baudrate=115200):
@@ -15,10 +16,27 @@ class SCARARobot:
             self.serial = None
 
     def inverse_kinematics(self, x, y):
-        # aquí tu modelo real SCARA
-        theta1 = x * 0.5
-        theta2 = y * 0.5
-        return theta1, theta2
+            L1 = self.L1
+            L2 = self.L2
+
+            # distancia al punto
+            r2 = x**2 + y**2
+
+            # cos(theta2)
+            cos_t2 = (r2 - L1**2 - L2**2) / (2 * L1 * L2)
+
+            # seguridad numérica
+            cos_t2 = max(-1.0, min(1.0, cos_t2))
+
+            theta2 = math.acos(cos_t2)
+
+            # theta1
+            k1 = L1 + L2 * math.cos(theta2)
+            k2 = L2 * math.sin(theta2)
+
+            theta1 = math.atan2(y, x) - math.atan2(k2, k1)
+
+            return theta1, theta2
 
     def send_position(self, x, y):
         theta1, theta2 = self.inverse_kinematics(x, y)
