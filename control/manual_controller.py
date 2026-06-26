@@ -8,6 +8,7 @@ from datetime import datetime,timedelta
 from textual.reactive import reactive
 from textual.binding import Binding
 from textual.screen import Screen
+import asyncio
 from robot import SCARARobot
 
 class VerticalMenu(HorizontalGroup):
@@ -49,6 +50,7 @@ class VerticalMenu(HorizontalGroup):
                 self.app.begin=True
         elif button_id=="parar":
             if event.button.id=="parar":
+                self.app.time=self.query_one(TimeDisplay).get_time()
                 self.query_one(TimeDisplay).stop()
                 self.app.send_path()
 
@@ -83,6 +85,9 @@ class TimeDisplay(Digits):
 
     def reset(self):
        self.time=0 
+
+    def get_time(self):
+        return self.time
 
 class HorizontalCanvas(HorizontalGroup):
     def on_mount(self):
@@ -148,6 +153,7 @@ class ManualController(App):
     path=set()
     mode=None
     begin=False
+    time=0
     scara_x_range=10
     scara_y_range=10
     last_sent=None
@@ -289,9 +295,10 @@ class ManualController(App):
     
         if event.button.id == "iniciar":
             try:
-                rb=SCARARobot()
+                self.rb=SCARARobot()
+                self.rb.connect()
                 self.show_popup("Conexión en vivo 🔴")
-            except e:
+            except Exception as e:
                 self.show_popup("Error en conexión 🔴")
 #    def on_key(self, event):
 #        if isinstance(self.focused, RadioSet):
@@ -321,9 +328,19 @@ class ManualController(App):
             
         #con=rb.conection()
 
+    async def send_path(self):
+        path = self.path
 
-    
-    def send_path(self):
-        for x,y in self.path:
-            xs,ys=self.canvas_to_scara(x,y)
-            self.robot.send_position(xs,ys)
+        if not path:
+            return
+
+        total_time = self.time
+        n = len(path)
+
+        dt = total_time / (n - 1)
+
+        for x, y in path:
+            xs, ys = self.canvas_to_scara(x, y)
+            self.robot.send_position(xs, ys)
+
+            await asyncio.sleep(dt)
