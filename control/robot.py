@@ -7,6 +7,8 @@ class SCARARobot:
         self.port = port
         self.baudrate = baudrate
         self.serial = None
+        self.L1=10
+        self.L2=10
 
     def connect(self):
         self.serial = serial.Serial(self.port, self.baudrate)
@@ -40,7 +42,6 @@ class SCARARobot:
             return theta1, theta2
 
     def send_position(self, x, y):
-
         theta1, theta2 = self.inverse_kinematics(x, y)
         payload = struct.pack("<ff", theta1, theta2)  # 2 floats
 

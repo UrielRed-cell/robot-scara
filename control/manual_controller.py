@@ -10,6 +10,7 @@ from textual.binding import Binding
 from textual.screen import Screen
 import asyncio
 from robot import SCARARobot
+from serial import SerialException
 
 class VerticalMenu(HorizontalGroup):
     
@@ -147,7 +148,7 @@ class Popup(Screen):
         self.app.pop_screen()
 
 class ManualController(App):
-    rb=None
+    rb=SCARARobot()
     x,y=23,23
     tool=False
     path=set()
@@ -166,7 +167,8 @@ class ManualController(App):
         Binding("w","move_up","arriba",show=True),
         Binding("a","move_left","izquierda",show=True),
         Binding("s","move_down","abajo",show=True),
-        Binding("d","move_right","derecha",show=True)
+        Binding("d","move_right","derecha",show=True),
+        Binding("ctrl+q","quit_app","salir",show=True)
               ]
     CSS_PATH = "styles.tcss"
     
@@ -178,7 +180,9 @@ class ManualController(App):
                 #self.query_one("#canva").set_pixel(self.x,self.y,color=Color.parse("white"))
                 self.path.add((self.x,self.y))
                 if self.mode=="t_real":
-                    self.send_pos()
+                    self.send_pos(True)
+            elif not self.tool and self.mode=="t_real":
+                self.send_pos(False)
             self.redraw_canvas()
             self.query_one("#position").update(f"Posición: ({self.x},{self.y}) Herramienta: {'LISTA' if self.tool else 'FUERA'}")
             #TODO Arreglar
@@ -198,6 +202,7 @@ class ManualController(App):
 
         # Dibujar cursor actual
         canvas.set_pixel(self.x,self.y,color=Color.parse("red"))
+        
 #No se ocupa
     def move_cursor(self, dx, dy):
         # borrar cursor viejo
@@ -267,6 +272,10 @@ class ManualController(App):
     def action_activate(self):
         if self.focused:
             self.focused.press()
+    
+    def action_quit_app(self):
+        self.rb.disconnect()
+        self.exit()
 
     def compose(self):
         yield VerticalGroup(VerticalMenu(),HorizontalCanvas(),FooterMenu(23,23))
@@ -284,7 +293,7 @@ class ManualController(App):
                 self.query_one("#reposo"),
                 ]
         #print(self.query_one("#position"))
-        #rb=SCARARobot()
+        #rb.connect()
 
     def show_popup(self, text: str):
         self.push_screen(Popup(text))
@@ -295,11 +304,10 @@ class ManualController(App):
     
         if event.button.id == "iniciar":
             try:
-                self.rb=SCARARobot()
                 self.rb.connect()
-                self.show_popup("Conexión en vivo 🔴")
-            except Exception as e:
-                self.show_popup("Error en conexión 🔴")
+                self.show_popup("Conexión en vivo 🔴\nBienvenido🫡")
+            except SerialException as e:
+                self.show_popup("Error en conexión 🔴\n"+str(e)+"🫠 REVISA TU PUERTO")
 #    def on_key(self, event):
 #        if isinstance(self.focused, RadioSet):
 #            if event.key in ("left", "right"):
@@ -318,14 +326,9 @@ class ManualController(App):
 
         return xs, ys
     
-    def send_pos(self):
-        xs,ys=self.canva_to_scara(self.x,self.y)
-        if self.last_sent!=(xs,ys):
-            self.rb.send_position(xs,ys)
-            self.last_sent=(xs,ys)
-
-            pass
-            
+    def send_pos(self,tool:bool):
+        th1,th2=self.rb.inverse_kinematics(self.x,self.y)
+        self.rb.send_angles(th1,th2,tool)
         #con=rb.conection()
 
     async def send_path(self):
