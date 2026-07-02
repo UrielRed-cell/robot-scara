@@ -64,5 +64,7 @@ class SCARARobot:
         length = len(payload)
 
         packet = struct.pack("<BBB", start, cmd, length) + payload
-
-        self.serial.write(packet)
+        if self.serial:
+            self.serial.write(packet)
+        else: 
+            print("NO SERIAL: ",packet)

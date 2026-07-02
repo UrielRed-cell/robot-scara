@@ -300,8 +300,10 @@ class ManualController(App):
 
     def on_button_pressed(self, event):
         if event.button.id == "parar":
-            self.show_popup("Exportado con éxito ✅")
-    
+            self.show_popup("Exportado/Finalizado con éxito ✅")
+            for x,y in self.path:
+                th1,th2=self.rb.inverse_kinematics(x,y)
+                self.rb.send_angles(th1,th2,True)
         if event.button.id == "iniciar":
             try:
                 self.rb.connect()
