@@ -1,4 +1,5 @@
 import serial
+import struct
 import math
 
 class SCARARobot:
@@ -39,11 +40,28 @@ class SCARARobot:
             return theta1, theta2
 
     def send_position(self, x, y):
-        theta1, theta2 = self.inverse_kinematics(x, y)
 
-        cmd = f"{theta1:.2f},{theta2:.2f}\n"
+        theta1, theta2 = self.inverse_kinematics(x, y)
+        payload = struct.pack("<ff", theta1, theta2)  # 2 floats
+
+        cmd = 0x01
+        start = 0x02
+        length = len(payload)
+
+        packet = struct.pack("<BBB", start, cmd, length) + payload
 
         if self.serial:
-            self.serial.write(cmd.encode())
+            self.serial.write(packet)
         else:
-            print("NO SERIAL:", cmd)
+            print("NO SERIAL:", packet)
+
+    def send_angles(self,theta1, theta2,tool):
+        start = 0x02
+        cmd = 0x01
+
+        payload = struct.pack("<ff", theta1, theta2,tool)
+        length = len(payload)
+
+        packet = struct.pack("<BBB", start, cmd, length) + payload
+
+        self.serial.write(packet)
