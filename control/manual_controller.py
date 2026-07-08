@@ -53,7 +53,7 @@ class VerticalMenu(HorizontalGroup):
             if event.button.id=="parar":
                 self.app.time=self.query_one(TimeDisplay).get_time()
                 self.query_one(TimeDisplay).stop()
-                self.app.send_path()
+                self.app.run_worker(self.app.send_path())
 
     def action_next_widget(self):
         self.screen.focus_next()
@@ -346,6 +346,7 @@ class ManualController(App):
 
         for x, y in path:
             xs, ys = self.canvas_to_scara(x, y)
-            self.robot.send_position(xs, ys)
-
+            #self.robot.send_position(xs, ys)
+            th1,th2=self.rb.inverse_kinematics(xs,ys)
+            self.rb.send_angles(th1,th2,True)
             await asyncio.sleep(dt)

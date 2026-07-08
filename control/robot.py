@@ -38,7 +38,8 @@ class SCARARobot:
             k2 = L2 * math.sin(theta2)
 
             theta1 = math.atan2(y, x) - math.atan2(k2, k1)
-
+            theta1 = math.degrees(theta1)
+            theta2 = math.degrees(theta2)
             return theta1, theta2
 
     def send_position(self, x, y):
@@ -60,7 +61,8 @@ class SCARARobot:
         start = 0x02
         cmd = 0x01
 
-        payload = struct.pack("<ff", theta1, theta2,tool)
+        payload = struct.pack("<ffB", theta1, theta2,tool)
+
         length = len(payload)
 
         packet = struct.pack("<BBB", start, cmd, length) + payload
