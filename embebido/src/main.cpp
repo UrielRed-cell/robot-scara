@@ -2,12 +2,12 @@
 #include <laso.h>
 #include <Servo.h>
 
-Serialparser router;
+laso::SerialParser router;
 Servo servo_1,servo_2,servo_3;
 
-#define pin_servo_1 1
-#define pin_servo_2 2
-#define pin_servo_3 3
+#define pin_servo_1 9
+#define pin_servo_2 10
+#define pin_servo_3 11
 
 struct ServoArgs{
     float theta1;
