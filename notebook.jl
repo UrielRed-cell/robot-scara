@@ -22,11 +22,14 @@ using WGLMakie
 # ╔═╡ 02d3fca7-b3a0-44a1-a48f-d9da15df6524
 using LaTeXStrings
 
+# ╔═╡ 26eb042e-cae6-494d-acfa-677341a74f77
+using LibSerialPort
+
 # ╔═╡ 3aa251f2-d456-4aba-aa95-c213daeeaeac
 using PlutoUI
 
 # ╔═╡ f778d239-f081-46cb-a065-b0ac89466a69
-begin
+#=begin
 	WGLMakie.activate!()
 	fig=Figure()
 	xe=WGLMakie.Observable(Float64[0,80,150])
@@ -36,6 +39,30 @@ begin
 	xlims!(ax,-200,200)
 	ylims!(ax,-200,200)
 	fig
+end=#
+begin
+    WGLMakie.activate!()
+    fig = Figure(size = (700, 500))
+    xe = Observable(Float64[0, 80, 150])
+    ye = Observable(Float64[0, 0, 0])
+    ax = Axis(
+        fig[1,1],
+        title = "Brazo Robótico SCARA",
+        xlabel = "Posición X (mm)",
+        ylabel = "Posición Y (mm)",
+        aspect = DataAspect(),
+        xgridvisible = true,
+        ygridvisible = true,
+    )
+    lines!(ax, xe, ye,
+        linewidth = 5,
+        color = :dodgerblue)
+    scatter!(ax, xe, ye,
+        markersize = 18,
+        color = :red)
+    xlims!(ax, -200, 200)
+    ylims!(ax, -200, 200)
+    fig
 end
 
 # ╔═╡ 5d251d1c-3eb5-4286-afc0-446281ffc56d
@@ -44,14 +71,21 @@ begin
 	ye[] = [0.0,50.0,0.0]
 end
 
+# ╔═╡ 507c9faf-4b97-451c-9bdf-e94c4a0d38c5
+#sp=LibSerialPort.open("/dev/ttyUSB0",115200)
+sp=nothing
+
 # ╔═╡ 3b7bf665-6c99-49dd-a73d-bfb042a80f22
-@bind x PlutoUI.Slider(-130:1:130, show_value=true)
+@bind x PlutoUI.Slider(-130:0.5:130, show_value=true)
 
 # ╔═╡ b6b4f927-f5d7-4327-89eb-ac8be0e3bfb4
-@bind y PlutoUI.Slider(-130:1:130, show_value=true)
+@bind y PlutoUI.Slider(13:0.5:74, show_value=true)
+
+# ╔═╡ 830b2588-c24c-493f-b771-4eb1cc3c3a35
+@bind tool CheckBox()
 
 # ╔═╡ 09acab91-e88f-484d-ae9e-e462f3d734d3
-function inverse_kinematics(x,y)
+#=function inverse_kinematics(x,y)
 	L₁=80
 	L₂=70
 	c=(x^2+y^2-L₁^2-L₂^2)/(-2*L₁*L₂)
@@ -70,6 +104,32 @@ function inverse_kinematics(x,y)
 	s=A\B
 	θ₁=atan(s[2],s[1])
 	return θ₁,θ₂
+end=#
+
+# ╔═╡ 80d38f9f-b441-4418-a109-6b5677f1dab8
+function inverse_kinematics(x,y)
+	L₁=80
+	L₂=70
+	#=c=(x^2+y^2-L₁^2-L₂^2)/(-2*L₁*L₂)
+	if abs(c)>1
+		return nothing
+	end
+	r=√(x^2+y^2)
+	if r > L₁+L₂ || r < abs(L₁-L₂)
+        return nothing
+    end
+	γ=acos(c)
+	#θ₂=π-γ
+	=#
+	θ₂ = acos((x^2+y^2-L₁^2-L₂^2)/(2*L₁*L₂))
+	θ₁ = atan(y,x) - atan(L₂*sin(θ₂), L₁+L₂*cos(θ₂))
+	#=A=[L₁+L₂*cos(θ₂) L₂;
+	  	L₂*sin(θ₂) L₁+L₂*cos(θ₂)]
+	B=[x;y]
+	s=A\B
+	θ₁=atan(s[2],s[1])
+	θ₁ = mod(θ₁ + π, 2π) - π=#
+	return θ₁,θ₂
 end
 
 # ╔═╡ 82d8f6a8-ec45-4264-96ce-6ab548c9c0cf
@@ -84,32 +144,52 @@ function draw_arm!(θ,xe,ye)
 	return xe[], ye[]
 end
 
+# ╔═╡ 49ea5322-fd5f-416e-a0e0-db0e8bbeef9e
+function serial_com(sp,θ₁,θ₂,🔧)
+	load=UInt8[]
+	push!(load,0x02)
+	push!(load,0x01)
+	push!(load,9)
+	append!(load, reinterpret(UInt8, [Float32(theta1)]))
+    append!(load, reinterpret(UInt8, [Float32(theta2)]))
+	push!(load,🔧)
+	write(sp,load)
+end
+
 # ╔═╡ 034b0238-3527-4e24-ae9a-cb79227c1f6c
-function main(x,y)
+function main(x,y,tool,sp)
 	θ=inverse_kinematics(x,y)
-	println("Valor de θ: (",rad2deg(θ[1]),",",rad2deg(θ[2]),")")
+	#sp=LibSerialPort.open("/dev/ttyUSB0",115200)
+	#serial_com(sp,θ[1]+deg2rad(18),θ[2],tool)
+	#println("Valor de θ: (",rad2deg(θ[1]),",",rad2deg(θ[2]),")")
+	println("\$CONSOLA\$")
+	println("Angulos: θ₁=",round(rad2deg(θ[1]),digits=4),
+			",θ₂=",round(rad2deg(θ[2]),digits=4))
 	yep,xep=draw_arm!(θ,xe,ye)
-	println("Posición: (",xep,",",yep,")")
-	L1 = sqrt(xep[2]^2 + yep[2]^2)
-	L2 = sqrt(
+	println("Posición: (x=",round(xep[3],digits=4),
+			",y=",round(yep[3],digits=4),")mm")
+	L₁ = sqrt(xep[2]^2 + yep[2]^2)
+	L₂ = sqrt(
     (xep[3]-xep[2])^2 +
     (yep[3]-yep[2])^2)
-	println("Longitud L₁: (",L1,")")
-	println("Longitud L₂: (",L2,")")
+	println("Longitud L₁: (",round(L₁,digits=4),")mm")
+	println("Longitud L₂: (",round(L₂,digits=4),")mm")
 end
 
 # ╔═╡ 28740c23-2b97-4a0f-a2e4-d8deb1e909e4
-main(x,y)
+main(x,y,tool,sp)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+LibSerialPort = "a05a14c7-6e3b-5ba9-90a2-45558833e1df"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [compat]
 LaTeXStrings = "~1.4.0"
+LibSerialPort = "~0.5.2"
 PlutoUI = "~0.7.83"
 WGLMakie = "~0.13.13"
 """
@@ -120,7 +200,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "011baae242805f0cba00e01bb232e06fcc471a44"
+project_hash = "6f17123fb118a8df574e371183a687da02fb687e"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -928,6 +1008,12 @@ version = "1.9.0+0"
 deps = ["Artifacts", "Libdl", "OpenSSL_jll"]
 uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
 version = "1.11.3+1"
+
+[[deps.LibSerialPort]]
+deps = ["Libdl", "libserialport_jll"]
+git-tree-sha1 = "69403284a6217f6e60e76553032a103893b7d910"
+uuid = "a05a14c7-6e3b-5ba9-90a2-45558833e1df"
+version = "0.5.2"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -1802,6 +1888,12 @@ git-tree-sha1 = "e51150d5ab85cee6fc36726850f0e627ad2e4aba"
 uuid = "b53b4c65-9356-5827-b1ea-8c7a1a84506f"
 version = "1.6.58+0"
 
+[[deps.libserialport_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "aacc5af8e8ba0b48a6feadac7afd4bca5d4e98d8"
+uuid = "220460dc-b50e-5ed0-8176-09b0fd261e90"
+version = "0.1.3+0"
+
 [[deps.libsixel_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "libpng_jll"]
 git-tree-sha1 = "c1733e347283df07689d71d61e14be986e49e47a"
@@ -1852,14 +1944,19 @@ version = "4.1.0+0"
 # ╔═╡ Cell order:
 # ╠═03a7091c-7f13-11f1-bf19-67c2b6b96e6f
 # ╠═02d3fca7-b3a0-44a1-a48f-d9da15df6524
+# ╠═26eb042e-cae6-494d-acfa-677341a74f77
 # ╠═3aa251f2-d456-4aba-aa95-c213daeeaeac
 # ╟─f778d239-f081-46cb-a065-b0ac89466a69
 # ╟─5d251d1c-3eb5-4286-afc0-446281ffc56d
-# ╟─28740c23-2b97-4a0f-a2e4-d8deb1e909e4
+# ╠═507c9faf-4b97-451c-9bdf-e94c4a0d38c5
+# ╠═28740c23-2b97-4a0f-a2e4-d8deb1e909e4
 # ╠═3b7bf665-6c99-49dd-a73d-bfb042a80f22
 # ╠═b6b4f927-f5d7-4327-89eb-ac8be0e3bfb4
-# ╠═09acab91-e88f-484d-ae9e-e462f3d734d3
+# ╠═830b2588-c24c-493f-b771-4eb1cc3c3a35
+# ╟─09acab91-e88f-484d-ae9e-e462f3d734d3
+# ╠═80d38f9f-b441-4418-a109-6b5677f1dab8
 # ╠═82d8f6a8-ec45-4264-96ce-6ab548c9c0cf
+# ╠═49ea5322-fd5f-416e-a0e0-db0e8bbeef9e
 # ╠═034b0238-3527-4e24-ae9a-cb79227c1f6c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
