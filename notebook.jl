@@ -72,7 +72,7 @@ begin
 end
 
 # ╔═╡ 507c9faf-4b97-451c-9bdf-e94c4a0d38c5
-#sp=LibSerialPort.open("/dev/ttyUSB0",115200)
+#sp=LibSerialPort.open("/dev/ttyUSB1",115200)
 sp=nothing
 
 # ╔═╡ 3b7bf665-6c99-49dd-a73d-bfb042a80f22
@@ -150,8 +150,8 @@ function serial_com(sp,θ₁,θ₂,🔧)
 	push!(load,0x02)
 	push!(load,0x01)
 	push!(load,9)
-	append!(load, reinterpret(UInt8, [Float32(theta1)]))
-    append!(load, reinterpret(UInt8, [Float32(theta2)]))
+	append!(load, reinterpret(UInt8, [Float32(θ₁)]))
+    append!(load, reinterpret(UInt8, [Float32(θ₂)]))
 	push!(load,🔧)
 	write(sp,load)
 end
@@ -159,9 +159,7 @@ end
 # ╔═╡ 034b0238-3527-4e24-ae9a-cb79227c1f6c
 function main(x,y,tool,sp)
 	θ=inverse_kinematics(x,y)
-	#sp=LibSerialPort.open("/dev/ttyUSB0",115200)
-	#serial_com(sp,θ[1]+deg2rad(18),θ[2],tool)
-	#println("Valor de θ: (",rad2deg(θ[1]),",",rad2deg(θ[2]),")")
+	#serial_com(sp,rad2deg(θ[1]+deg2rad(18)),rad2deg(θ[2]),tool)
 	println("\$CONSOLA\$")
 	println("Angulos: θ₁=",round(rad2deg(θ[1]),digits=4),
 			",θ₂=",round(rad2deg(θ[2]),digits=4))
@@ -174,6 +172,7 @@ function main(x,y,tool,sp)
     (yep[3]-yep[2])^2)
 	println("Longitud L₁: (",round(L₁,digits=4),")mm")
 	println("Longitud L₂: (",round(L₂,digits=4),")mm")
+	println("Estado de herramienta: ",tool)
 end
 
 # ╔═╡ 28740c23-2b97-4a0f-a2e4-d8deb1e909e4
@@ -1948,13 +1947,13 @@ version = "4.1.0+0"
 # ╠═3aa251f2-d456-4aba-aa95-c213daeeaeac
 # ╟─f778d239-f081-46cb-a065-b0ac89466a69
 # ╟─5d251d1c-3eb5-4286-afc0-446281ffc56d
-# ╠═507c9faf-4b97-451c-9bdf-e94c4a0d38c5
+# ╟─507c9faf-4b97-451c-9bdf-e94c4a0d38c5
 # ╠═28740c23-2b97-4a0f-a2e4-d8deb1e909e4
 # ╠═3b7bf665-6c99-49dd-a73d-bfb042a80f22
 # ╠═b6b4f927-f5d7-4327-89eb-ac8be0e3bfb4
 # ╠═830b2588-c24c-493f-b771-4eb1cc3c3a35
 # ╟─09acab91-e88f-484d-ae9e-e462f3d734d3
-# ╠═80d38f9f-b441-4418-a109-6b5677f1dab8
+# ╟─80d38f9f-b441-4418-a109-6b5677f1dab8
 # ╠═82d8f6a8-ec45-4264-96ce-6ab548c9c0cf
 # ╠═49ea5322-fd5f-416e-a0e0-db0e8bbeef9e
 # ╠═034b0238-3527-4e24-ae9a-cb79227c1f6c
